@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
             int curr = dst;
             while(curr != -1 && pi[curr] != -1) {
                 int parent = pi[curr];
-                DrawDirectedArrow(positions[parent], positions[curr], RED, 5.0f);
+                DrawDirectedArrow(positions[parent], positions[curr], VIOLET , 5.0f);
                 curr = parent;
             }
             
