@@ -16,6 +16,7 @@ void Initialize(int n, int src, int d[], int pi[], int S[]){
   d[src] = 0;
 }
 
+// Find the unvisited node with the smallest known distance
 int ExtractMin(int n, int d[], int S[]){
   int min = INF;
   int min_index = -1;
@@ -28,6 +29,7 @@ int ExtractMin(int n, int d[], int S[]){
   return min_index; 
 }
 
+// Update the distance to node 'v' if a shorter path is found via node 'u'
 void Relax(int u, int v, int weight, int d[], int pi[]){
   if(d[u] != INF && d[u] + weight < d[v]) { 
       d[v] = d[u] + weight;
@@ -35,6 +37,7 @@ void Relax(int u, int v, int weight, int d[], int pi[]){
       }
  }
 
+// Recursively backtrack through the 'pi' array to print the path from source to destination
 void printPath(int pi[], int j) {
    if(pi[j] == -1 ) {
    printf("%d",j);
@@ -51,28 +54,29 @@ void printPath(int pi[], int j) {
    return;
    }
 
- int d[MAX_NODES];    
- int pi[MAX_NODES];   
- int S[MAX_NODES]; 
+ int d[MAX_NODES];    // Stores shortest distance from source to each node
+ int pi[MAX_NODES];   // Stores the predecessor of each node
+ int S[MAX_NODES];    // Set of visited nodes (1 if visited, 0 otherwise)
 
 Initialize(n, src, d, pi, S);
 for(int i = 0 ; i<n ; i++){
-
+// Pick the best candidate node to process next
  int u = ExtractMin(n, d, S);
  if ( u == -1 || d[u] == INF){
-   break;
+   break; // No more reachable nodes
    }
    
-  S[u] = 1;
-  
+  S[u] = 1; // Mark node as "solved"
+
+  // Check all neighbors of the current node
   for(int v = 0; v<n; v++){
-  
    if(graph[u][v] != INF && S[v] == 0){
    Relax(u, v, graph[u][v], d, pi);
      }
     }
    }
-   
+
+   // Output the final path and the total weight
  if(d[dst] == INF) {
   printf("No path found\n0\n");
   } else { 
@@ -98,6 +102,7 @@ for(int i = 0 ; i<n ; i++){
     int n, m;
     if (fscanf(file, "%d %d", &n, &m) != 2) return 1;
 
+    // Initialize the adjacency matrix with INF to represent no edges
     int graph[MAX_NODES][MAX_NODES];
     for (int i = 0; i < MAX_NODES; i++) {
         for (int j = 0; j < MAX_NODES; j++) {
@@ -105,11 +110,11 @@ for(int i = 0 ; i<n ; i++){
         }
     }
 
- 
+ // Read edges from file and build the graph
     for (int i = 0; i < m; i++) {
         int u, v, weight;
         fscanf(file, "%d %d %d", &u, &v, &weight);
-       
+       // Dijkstra doesn't vibe with negative weights
         if (weight < 0) {
             printf("Error: Negative weights are not allowed.\n");
             fclose(file);
