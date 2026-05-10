@@ -23,5 +23,4 @@ We started by thinking about how to get from the Hospital to an Accident as fast
 
 ## How to Run
 After building, run the executable with the input file as an argument: `./dijkstra input.txt` for milestone 1 and `./sim input.txt` for milestones 2 and 3.
-
-note: we used one laptop because this was the only available option , but we worked as a group :)  
+ 
