@@ -114,7 +114,6 @@ for(int i = 0 ; i<n ; i++){
     for (int i = 0; i < m; i++) {
         int u, v, weight;
         fscanf(file, "%d %d %d", &u, &v, &weight);
-       // Dijkstra doesn't vibe with negative weights
         if (weight < 0) {
             printf("Error: Negative weights are not allowed.\n");
             fclose(file);
