@@ -4,9 +4,11 @@
 #include <math.h>
 #include <limits.h>
 
+// Define graph limits and INF constant for unreachable nodes (standard for Dijkstra)
 #define MAX_NODES 15
 #define INF INT_MAX
 
+// Global arrays to store shortest path metadata: distances (d), parents (pi), and visited status (S)
 int d[MAX_NODES];
 int pi[MAX_NODES];
 int S[MAX_NODES];
@@ -16,6 +18,7 @@ char *stationNames[] = {"Hospital", "Street 1", "Street 2", "Street 3", "Street 
 
 typedef enum { START, MOVING, WAITING, ARRIVED } DroneState;
 
+// Helper to render directional lines with arrowheads between nodes
 void DrawDirectedArrow(Vector2 start, Vector2 end, Color color, float thickness) {
     float angle = atan2f(end.y - start.y, end.x - start.x);
     float startOffset = 25.0f;
@@ -27,11 +30,13 @@ void DrawDirectedArrow(Vector2 start, Vector2 end, Color color, float thickness)
     DrawPoly(tip, 3, headSize, (angle * RAD2DEG) + 240, color);
 }
 
+// Initialization: set all distances to infinity and mark all nodes as unvisited
 void Initialize(int n, int src) {
     for (int i = 0; i < n; i++) { d[i] = INF; pi[i] = -1; S[i] = 0; }
     d[src] = 0;
 }
 
+// Greedily find the node with the smallest distance that hasn't been visited yet
 int ExtractMin(int n) {
     int min = INF, min_index = -1;
     for (int v = 0; v < n; v++) {
@@ -40,6 +45,7 @@ int ExtractMin(int n) {
     return min_index;
 }
 
+// Relaxation: check if passing through node 'u' provides a shorter path to node 'v'
 void Relax(int u, int v, int weight) {
     if (d[u] != INF && d[u] + weight < d[v]) {
         d[v] = d[u] + weight;
@@ -63,6 +69,8 @@ int main(int argc, char *argv[]) {
     if (argc != 2) return 1;
     FILE *file = fopen(argv[1], "r");
     if (!file) return 1;
+
+ // Input Parsing: Load graph topology and calculate node positions in a circular layout
     int n, m;
     fscanf(file, "%d %d", &n, &m);
     for (int i = 0; i < n; i++) {
@@ -81,6 +89,7 @@ int main(int argc, char *argv[]) {
 
     Dijkstra(n, src, dst);
 
+ // Reconstruct the final path by following the parent (pi) pointers back to source
     int fullPath[MAX_NODES];
     int pathCount = 0;
     int temp = dst;
@@ -106,12 +115,14 @@ int main(int argc, char *argv[]) {
     Rectangle btn = { 20, 20, 100, 40 };
 
     while (!WindowShouldClose()) {
+     // Input Handling: Toggle the simulation on/off when the button is clicked
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), btn)) {
             isPlaying = !isPlaying;
         }
 
         if (isPlaying && state != ARRIVED) {
             timer += GetFrameTime();
+         // Timing Logic: Handle the 1-second delay for node-to-node transitions
             if (state == START || state == WAITING) {
                 if (timer >= 1.0f) {
                     timer = 0;
@@ -119,6 +130,7 @@ int main(int argc, char *argv[]) {
                     jumpIndex = 0;
                 }
             } else if (state == MOVING) {
+             // Interpolation: Calculate the drone's position between current and next node
                 int u = fullPath[currentStep];
                 int v = fullPath[currentStep + 1];
                 int W = graph[u][v];
@@ -138,7 +150,7 @@ int main(int argc, char *argv[]) {
 
         BeginDrawing();
         ClearBackground(BLACK);
-
+// Rendering: Draw all edges in the graph and label them with their weights (km)
         for (int u = 0; u < n; u++) {
             for (int v = 0; v < n; v++) {
                 if (graph[u][v] != INF) {
@@ -148,6 +160,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
+     // Visualization Overlay: Highlight the calculated shortest path and draw the drone
         for (int i = 0; i < pathCount - 1; i++) {
             DrawDirectedArrow(positions[fullPath[i]], positions[fullPath[i + 1]], VIOLET, 4.0f);
         }
