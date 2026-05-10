@@ -5,6 +5,8 @@
 #define MAX_NODES 15
 #define INF INT_MAX
 
+// Set initial values: distances to infinity, parents to null, and visited set to empty
+
 void Initialize(int n, int src, int d[], int pi[], int S[]){
   for(int i = 0; i < n; i++){
     d[i] = INF;
