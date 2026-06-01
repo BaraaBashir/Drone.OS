@@ -15,11 +15,15 @@ We started by thinking about how to get from the Hospital to an Accident as fast
 - **Milestone 1**: Implemented the core Dijkstra’s Algorithm logic. The program reads a graph from a text file and outputs the shortest path distances and predecessors to the console.
 - **Milestone 2**: Created a visual representation of the graph using the Raylib library. Nodes are plotted in a circular layout, and the calculated shortest path is highlighted in purple.
 - **Milestone 3**: Added a dynamic animation system. A drone (Hexagon) follows the shortest path. We implemented a state machine to handle a 1-second delay at intersections and discrete 300ms "jumps" along edges based on their weight (1 jump per 1km).
+- **Milestone 4**: we upgraded our simulation from a single traveler to multiple passengers ( in our story , if 1 drone isnt enough , we send 3 drones instead)  moving across the graph simultaneously, where the main Raylib GUI program acts as the Parent process that calculates everyone's Dijkstra paths, draws each passenger in a unique color with a matching custom trail, and controls the animation speed.
+- **Milestone 5**:shifts the project from a centralized tracking model to a decentralized, distributed multi-processing architecture by giving full navigation autonomy to sandboxed child processes. The parent process is forbidden from calculating paths or handling drone routing; instead, each independent child process reads the graph, executes its own internal Dijkstra's algorithm, and uses anonymous pipes to stream live telemetry packets back to the parent.
 
 ## How to Build
 1. **Milestone 1**: `make milestone1`
 2. **Milestone 2**: `make milestone2`
 3. **Milestone 3**: `make milestone3`
-
+4. **Milestone 4**: `make milestone4`
+5. **Milestone 5**: `make milestone5`
+   
 ## How to Run
-After building, run the executable with the input file as an argument: `./dijkstra input.txt` for milestone 1 and `./sim input.txt` for milestones 2 and 3.
+After building, run the executable with the input file as an argument: `./dijkstra input.txt` for milestone 1 and `./sim input.txt` for milestones 2,3,4 and 5 .
