@@ -8,3 +8,9 @@
 4 5 3 
 2 5 10 
 0 5 
+
+#travelers
+3      # Number of child processes to fork (N)
+0 5     # Traveler 0: Source 0, Destination 5
+1 4    # Traveler 1: Source 1, Destination 4
+2 3     #Traveler 2: Source 2, Destination 3
