@@ -11,5 +11,11 @@ milestone2:
 milestone3:
 	$(CC) $(CFLAGS) sim.c -o sim $(LDFLAGS)
 
+milestone4: 
+ 	$(CC) $(CFLAGS) milestone4.c -o sim $(LDFLAGS)
+
+milestone5:
+	$(CC) $(CFLAGS) milestone5.c -o sim $(LDFLAGS) 
+
 clean:
 	rm -f dijkstra sim
