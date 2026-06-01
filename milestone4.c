@@ -13,9 +13,9 @@
 #define MAX_NODES 15
 #define INF INT_MAX
 #define MAX_TRAVELERS 100
-
+// States to keep track of what each drone is currently doing
 typedef enum { START, MOVING, WAITING, ARRIVED } DroneState;
-
+// Struct holding all navigation, timing, and rendering data for a single traveler
 typedef struct {
     int src;
     int dst;
@@ -29,15 +29,15 @@ typedef struct {
     Color color;
     Color pathColor;
 } Traveler;
-
+// Global variables for the grid network
 int graph[MAX_NODES][MAX_NODES];
-Vector2 positions[MAX_NODES];
+Vector2 positions[MAX_NODES]; // Maps abstract nodes to physical pixels on screen
 char *stationNames[] = {"Hospital", "Street 1", "Street 2", "Street 3", "Street 4", "Accident"};
 
 Traveler travelers[MAX_TRAVELERS];
 int num_travelers = 0;
-pid_t child_pids[MAX_TRAVELERS];
-
+pid_t child_pids[MAX_TRAVELERS];// Tracks fork process IDs so we can clean them up later
+// Custom function to calculate angles and draw clean vectors with arrowheads between nodes
 void DrawDirectedArrow(Vector2 start, Vector2 end, Color color, float thickness) {
     float angle = atan2f(end.y - start.y, end.x - start.x);
     float startOffset = 25.0f;
@@ -48,7 +48,7 @@ void DrawDirectedArrow(Vector2 start, Vector2 end, Color color, float thickness)
     DrawLineEx(lineStart, tip, thickness, color);
     DrawPoly(tip, 3, headSize, (angle * RAD2DEG) + 240, color);
 }
-
+// Standard Dijkstra routing algorithm to calculate the absolute shortest path
 void Dijkstra(int n, int src, int dst, int *fullPath, int *pathCount) {
     int d[MAX_NODES];
     int pi[MAX_NODES];
@@ -79,7 +79,7 @@ void Dijkstra(int n, int src, int dst, int *fullPath, int *pathCount) {
             }
         }
     }
-
+// Trace backward from destination to source to construct the route
     int count = 0;
     int temp = dst;
     if (d[dst] == INF) {
@@ -90,6 +90,7 @@ void Dijkstra(int n, int src, int dst, int *fullPath, int *pathCount) {
         fullPath[count++] = temp;
         temp = pi[temp];
     }
+ // Flip the array back to correct order (source -> destination)
     for (int i = 0; i < count / 2; i++) {
         int t = fullPath[i];
         fullPath[i] = fullPath[count - 1 - i];
@@ -97,7 +98,7 @@ void Dijkstra(int n, int src, int dst, int *fullPath, int *pathCount) {
     }
     *pathCount = count;
 }
-
+// Pair matching colors for drones and their highlighted route tracks
 void GetTravelerColors(int index, Color *droneColor, Color *pathColor) {
     Color dColors[] = { MAGENTA, ORANGE, PURPLE, LIME, GOLD, PINK, RED, MAROON, GREEN };
     Color pColors[] = { 
@@ -129,7 +130,7 @@ int main(int argc, char *argv[]) {
         sscanf(line, "%d %d", &n, &m);
         break;
     }
-
+// Calculate pixel coordinates dynamically in a circle layout based on total nodes
     for (int i = 0; i < n; i++) {
         positions[i].x = 400 + 240 * cos(i * 2 * PI / n);
         positions[i].y = 300 + 240 * sin(i * 2 * PI / n);
@@ -140,7 +141,7 @@ int main(int argc, char *argv[]) {
             graph[i][j] = INF;
         }
     }
-
+// Parse edge list links and save their respective street weights
     int edges_read = 0;
     while (edges_read < m && fgets(line, sizeof(line), file)) {
         if (line[0] == '#' || line[0] == '\n') continue;
@@ -160,7 +161,7 @@ int main(int argc, char *argv[]) {
         sscanf(line, "%d", &num_travelers);
         break;
     }
-
+// Load sources and destinations into our local travelers database
     int travelers_read = 0;
     while (travelers_read < num_travelers && fgets(line, sizeof(line), file)) {
         if (line[0] == '#' || line[0] == '\n') continue;
@@ -178,7 +179,7 @@ int main(int argc, char *argv[]) {
         }
     }
     fclose(file);
-
+// Multiprocessing block: compute shortest route first, then spawn individual child processes
     for (int i = 0; i < num_travelers; i++) {
         Dijkstra(n, travelers[i].src, travelers[i].dst, travelers[i].fullPath, &travelers[i].pathCount);
         
@@ -269,7 +270,7 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-
+// Render active custom paths for traveling drones
         for (int i = 0; i < num_travelers; i++) {
             if (travelers[i].state != ARRIVED && travelers[i].pathCount > 0) {
                 for (int j = travelers[i].currentStep; j < travelers[i].pathCount - 1; j++) {
@@ -277,7 +278,7 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-
+// Render network station nodes and map custom text identifiers
         for (int i = 0; i < n; i++) {
             Color nodeColor = SKYBLUE;
             for (int t = 0; t < num_travelers; t++) {
@@ -288,7 +289,7 @@ int main(int argc, char *argv[]) {
             DrawText(TextFormat("%d", i), (int)positions[i].x - 6, (int)positions[i].y - 9, 20, BLACK);
             if (i < 6) DrawText(stationNames[i], (int)positions[i].x - 30, (int)positions[i].y + 28, 16, nodeColor);
         }
-
+// Control HUD layout button configuration
         DrawRectangleRec(btn, isPlaying ? RED : GREEN);
         DrawText(isPlaying ? "STOP" : "PLAY", (int)btn.x + 20, (int)btn.y + 10, 20, WHITE);
 
@@ -298,7 +299,7 @@ int main(int argc, char *argv[]) {
                 DrawPolyLinesEx(travelers[i].dronePos, 6, 18.0f, 0.0f, 2.0f, WHITE);
             }
         }
-
+// Check if all background drone missions completed safely
         int all_arrived = 1;
         for (int i = 0; i < num_travelers; i++) {
             if (travelers[i].state != ARRIVED) all_arrived = 0;
@@ -311,7 +312,7 @@ int main(int argc, char *argv[]) {
     }
 
     CloseWindow();
-
+// Critical Emergency Fallback: Ensure no residual background child threads remain orphaned if window forces close
     for (int i = 0; i < num_travelers; i++) {
         if (child_pids[i] != 0) {
             kill(child_pids[i], SIGKILL);
