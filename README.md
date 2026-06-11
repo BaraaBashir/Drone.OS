@@ -9,7 +9,7 @@
 
 
 ## Description About our Project :)
-We started by thinking about how to get from the Hospital to an Accident as fast as possible. We used Dijkstra’s Algorithm as the "brain" of the simulation. It works by looking at every possible street (edge) and constantly updating the "best known distance" from the start until it locks in the absolute shortest path to the destination.
+ We started by thinking about how to get a single emergency drone from the Hospital to an Accident as fast as possible, using Dijkstra’s Algorithm to lock in the absolute shortest path. But then we realized: what if multiple drones need to deploy at the same time? We rebuilt the "brain" of our simulation from the ground up. Now, instead of one program controlling everything, every drone has a mind of its own. They run as independent processes, talk to our Raylib GUI through anonymous pipes, and even wait politely in traffic queues using Shared Memory Semaphores so they don't crash into each other at intersections!
 
 ## Implementation Descriptions
 - **Milestone 1**: Implemented the core Dijkstra’s Algorithm logic. The program reads a graph from a text file and outputs the shortest path distances and predecessors to the console.
