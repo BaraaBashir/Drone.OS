@@ -1,11 +1,11 @@
 
 # Drone Pathfinding 
 
-## Names and Responsibilities
-1) Hiba Zahra - Responsible for the visual layout of the project.
-2) Baraa Bashir - Implementation and Debugging. 
-3) Aya Awissat - Animation & Timing Control
-4) Sarah Ayoubi - File I/O and Makefile build system
+## Names
+1) Hiba Zahra
+2) Baraa Bashir
+3) Aya Awissat 
+4) Sarah Ayoubi
 
 
 ## Description About our Project :)
