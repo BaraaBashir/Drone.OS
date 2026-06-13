@@ -17,6 +17,8 @@
 - **Milestone 3**: Added a dynamic animation system. A drone (Hexagon) follows the shortest path. We implemented a state machine to handle a 1-second delay at intersections and discrete 300ms "jumps" along edges based on their weight (1 jump per 1km).
 - **Milestone 4**: we upgraded our simulation from a single traveler to multiple passengers ( in our story , if 1 drone isnt enough , we send 3 drones instead)  moving across the graph simultaneously, where the main Raylib GUI program acts as the Parent process that calculates everyone's Dijkstra paths, draws each passenger in a unique color with a matching custom trail, and controls the animation speed.
 - **Milestone 5**:shifts the project from a centralized tracking model to a decentralized, distributed multi-processing architecture by giving full navigation autonomy to sandboxed child processes. The parent process is forbidden from calculating paths or handling drone routing; instead, each independent child process reads the graph, executes its own internal Dijkstra's algorithm, and uses anonymous pipes to stream live telemetry packets back to the parent.
+- **Milestone 6**: We added a realistic traffic control system to our drone network. Since multiple drones might try to enter the same intersection at once, we implemented POSIX Semaphores in Shared Memory to act as traffic locks. Now, only one drone can enter a node at a time (waiting inside for exactly 1 second). Any other drones that arrive must wait outside in a queue which is visibly marked with a glowing red traffic halo in the GU until the intersection is clear. 
+
 
 ## How to Build
 1. **Milestone 1**: `make milestone1`
@@ -24,6 +26,9 @@
 3. **Milestone 3**: `make milestone3`
 4. **Milestone 4**: `make milestone4`
 5. **Milestone 5**: `make milestone5`
+6. **Milestone 6**: 'make milestone6'
    
 ## How to Run
 After building, run the executable with the input file as an argument: `./dijkstra input.txt` for milestone 1 and `./sim input.txt` for milestones 2,3,4 and 5 .
+for milestone 6, ./sim input_m6.txt ( its a new input file because the old example didnt have the sync ties)
+
