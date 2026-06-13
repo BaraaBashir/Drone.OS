@@ -1,11 +1,11 @@
 
 # Drone Pathfinding 
 
-## Names
-1) Hiba Zahra
-2) Baraa Bashir
-3) Aya Awissat 
-4) Sarah Ayoubi
+## Names and Responsibilities 
+1) Hiba Zahra - GUI & visuals 
+2) Baraa Bashir - Multi-Processing & Synchronization 
+3) Aya Awissat - Communication & Timing
+4) Sarah Ayoubi - Pathfinding Engine & Data Parsing
 
 
 ## Description About our Project :)
