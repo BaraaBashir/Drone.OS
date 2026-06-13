@@ -17,6 +17,7 @@
 #define INF INT_MAX
 #define MAX_TRAVELERS 100
 
+// Tracks the current execution and animation phase of a drone
 typedef enum { START, MOVING, WAITING_FOR_LOCK, IN_NODE, ARRIVED } DroneState;
 
 typedef struct {
@@ -33,6 +34,7 @@ typedef struct {
     float timer;
 } Traveler;
 
+// IPC payload sent from child worker processes to the main GUI process
 typedef struct {
     pid_t pid;
     int traveler_idx;
@@ -52,6 +54,7 @@ int num_travelers = 0;
 pid_t child_pids[MAX_TRAVELERS];
 int num_nodes_global = 0;
 
+// Shared pointer for semaphores accessible by all forked child processes
 sem_t *node_semaphores;
 
 void DrawDirectedArrow(Vector2 start, Vector2 end, Color color, float thickness) {
@@ -65,6 +68,7 @@ void DrawDirectedArrow(Vector2 start, Vector2 end, Color color, float thickness)
     DrawPoly(tip, 3, headSize, (angle * RAD2DEG) + 240, color);
 }
 
+// Standard Dijkstra routine to populate fullPath with nodes from src to dst
 void Dijkstra(int n, int src, int dst, int *fullPath, int *pathCount) {
     int d[MAX_NODES];
     int pi[MAX_NODES];
@@ -206,12 +210,14 @@ int main(int argc, char *argv[]) {
     }
     num_nodes_global = n;
 
+    // Allocate shared, anonymous memory map so children can share the same array of semaphores
     node_semaphores = mmap(NULL, sizeof(sem_t) * n, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (node_semaphores == MAP_FAILED) {
         perror("mmap failed");
         exit(1);
     }
 
+    // Initialize each node semaphore with a value of 1 (binary mutex lock, shared between processes)
     for (int i = 0; i < n; i++) {
         if (sem_init(&node_semaphores[i], 1, 1) != 0) {
             perror("sem_init failed");
@@ -219,6 +225,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Calculate circular visual positions for rendering nodes
     for (int i = 0; i < n; i++) {
         positions[i].x = 400 + 240 * cos(i * 2 * PI / n);
         positions[i].y = 300 + 240 * sin(i * 2 * PI / n);
@@ -276,6 +283,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Set reading end to non-blocking to prevent the Raylib GUI window loop from freezing
     fcntl(pipe_fds[0], F_SETFL, O_NONBLOCK);
 
     for (int i = 0; i < num_travelers; i++) {
@@ -284,13 +292,13 @@ int main(int argc, char *argv[]) {
             perror("Fork failed");
             exit(1);
         } else if (pid == 0) {
-            close(pipe_fds[0]);
+            close(pipe_fds[0]); // Child process only writes to pipe
             RunChildProcess(i, n, pipe_fds[1]);
         } else {
             child_pids[i] = pid;
         }
     }
-    close(pipe_fds[1]);
+    close(pipe_fds[1]); // Main process only reads from pipe
 
     InitWindow(800, 600, "Project Sentinel - Milestone 6 (Traffic Jam)");
     SetTargetFPS(60);
@@ -305,6 +313,7 @@ int main(int argc, char *argv[]) {
 
         if (isPlaying) {
             IPCMessage msg;
+            // Drain all available messages from the pipe buffer each frame
             while (read(pipe_fds[0], &msg, sizeof(IPCMessage)) > 0) {
                 int idx = msg.traveler_idx;
                 travelers[idx].current_node = msg.current_node;
@@ -332,6 +341,7 @@ int main(int argc, char *argv[]) {
             float dt = GetFrameTime();
             for (int i = 0; i < num_travelers; i++) {
                 if (travelers[i].state == MOVING && travelers[i].next_node != -1) {
+                    // Linearly interpolate positions based on edge weight duration (Weight * 0.3 seconds)
                     travelers[i].timer += dt;
                     int u = travelers[i].current_node;
                     int v = travelers[i].next_node;
@@ -345,8 +355,7 @@ int main(int argc, char *argv[]) {
                     travelers[i].dronePos.y = positions[u].y + progress * (positions[v].y - positions[u].y);
                     
                 } else if (travelers[i].state == WAITING_FOR_LOCK && travelers[i].prev_node != -1) {
-                    // --- THE FIX: Park outside the node! ---
-                    // Calculate vector pointing from current node back to previous node
+                    // Offset drawing vector back along the incoming street to visually queue outside the locked node
                     float dx = positions[travelers[i].prev_node].x - positions[travelers[i].current_node].x;
                     float dy = positions[travelers[i].prev_node].y - positions[travelers[i].current_node].y;
                     float dist = sqrtf(dx*dx + dy*dy);
@@ -366,6 +375,7 @@ int main(int argc, char *argv[]) {
         BeginDrawing();
         ClearBackground(BLACK);
 
+        // Render entire structural graph map layout
         for (int u = 0; u < n; u++) {
             for (int v = 0; v < n; v++) {
                 if (graph[u][v] != INF) {
@@ -375,12 +385,14 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // Draw active tracking lines for drones currently in transit
         for (int i = 0; i < num_travelers; i++) {
             if (travelers[i].has_started && travelers[i].state != ARRIVED && travelers[i].next_node != -1) {
                 DrawDirectedArrow(positions[travelers[i].current_node], positions[travelers[i].next_node], travelers[i].pathColor, 4.0f);
             }
         }
 
+        // Render static node bases and names
         for (int i = 0; i < n; i++) {
             Color nodeColor = SKYBLUE;
             for (int t = 0; t < num_travelers; t++) {
@@ -400,6 +412,7 @@ int main(int argc, char *argv[]) {
             DrawText("RUNNING", (int)btn.x + 8, (int)btn.y + 10, 16, WHITE);
         }
 
+        // Draw active drone icons and add visual ring warnings if stuck waiting for an intersection lock
         for (int i = 0; i < num_travelers; i++) {
             if (travelers[i].has_started && travelers[i].state != ARRIVED) {
                 if (travelers[i].state == WAITING_FOR_LOCK) {
@@ -425,6 +438,7 @@ int main(int argc, char *argv[]) {
     close(pipe_fds[0]);
     CloseWindow();
 
+    // Cleanly reclaim resources and prevent zombie processes or dangling OS shared maps
     for (int i = 0; i < num_travelers; i++) {
         waitpid(child_pids[i], NULL, 0);
     }
