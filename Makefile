@@ -12,13 +12,13 @@ milestone3:
 	$(CC) $(CFLAGS) sim.c -o sim $(LDFLAGS)
 
 milestone4: 
- 	$(CC) $(CFLAGS) milestone4.c -o sim $(LDFLAGS)
+	$(CC) $(CFLAGS) milestone4.c -o sim $(LDFLAGS)
 
 milestone5:
 	$(CC) $(CFLAGS) milestone5.c -o sim $(LDFLAGS) 
 
 milestone6:
-    $(CC) $(CFLAGS) milestone6.c -o sim $(LDFLAGS) -pthread
+	$(CC) $(CFLAGS) milestone6.c -o sim $(LDFLAGS) -pthread
 
 milestone7:
 	$(CC) $(CFLAGS) milestone7.c -o sim-schd $(LDFLAGS)
