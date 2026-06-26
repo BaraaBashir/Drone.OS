@@ -34,7 +34,10 @@ typedef struct {
     int traveler_idx;
     int current_node;
     int next_node;
+    int prev_node;
     int is_finished;
+    DroneState state;
+    int no_path_found;  // NEW: 1 if no path exists, 0 otherwise
 } IPCMessage;
 
 int graph[MAX_NODES][MAX_NODES];
@@ -135,7 +138,19 @@ void GetTravelerColors(int index, Color *droneColor, Color *pathColor) {
     Dijkstra(n, travelers[index].src, travelers[index].dst, childPath, &childPathCount);
 
     if (childPathCount == 0) {
-        exit(1);
+        IPCMessage error_msg;
+        error_msg.pid = getpid();
+        error_msg.traveler_idx = index;
+        error_msg.current_node = travelers[index].src;
+        error_msg.next_node = travelers[index].dst;
+        error_msg.prev_node = -1;
+        error_msg.is_finished = 0;
+        error_msg.state = ARRIVED;
+        error_msg.no_path_found = 1;  // Mark as "no path" message
+        
+        write(write_fd, &error_msg, sizeof(IPCMessage));
+        close(write_fd);
+        exit(0);
     }
 
    
@@ -290,14 +305,26 @@ int main(int argc, char *argv[]) {
         }
 
         if (isPlaying) {
-            IPCMessage msg;
-            while (read(pipe_fds[0], &msg, sizeof(IPCMessage)) > 0) {
-                int idx = msg.traveler_idx;
-                travelers[idx].has_started = 1;
-                travelers[idx].current_node = msg.current_node;
-                travelers[idx].next_node = msg.next_node;
-                travelers[idx].dronePos = positions[msg.current_node];
-
+             IPCMessage msg;
+    while (read(pipe_fds[0], &msg, sizeof(IPCMessage)) > 0) {
+        
+        // NEW: Handle special "no path found" message
+        if (msg.no_path_found == 1) {
+            printf("\n[PID=%d] ERROR: No path found for traveler %d (from node %d to node %d)\n",
+                   msg.pid, msg.traveler_idx, msg.current_node, msg.next_node);
+            travelers[msg.traveler_idx].state = ARRIVED;
+            fflush(stdout);
+            continue;  // Skip normal processing
+        }
+        
+        // Original message processing
+        int idx = msg.traveler_idx;
+        travelers[idx].has_started = 1;
+        travelers[idx].current_node = msg.current_node;
+        travelers[idx].next_node = msg.next_node;
+        travelers[idx].prev_node = msg.prev_node;
+        travelers[idx].state = msg.state;
+        
                 if (msg.is_finished) {
                     travelers[idx].state = ARRIVED;
                     printf("[PID=%d] arrived at node %d | DESTINATION\n", msg.pid, msg.current_node);
