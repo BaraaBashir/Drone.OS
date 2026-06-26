@@ -1,4 +1,4 @@
-#define _DEFAULT_SOURCE
+ #define _DEFAULT_SOURCE
 #include "raylib.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -171,6 +171,16 @@ void RunChildProcess(int index, int n, int write_fd) {
 void WakeNextTraveler(int node) {
     if (queue_sizes[node] == 0) return; // Nobody waiting
     
+    // --- EXAM TASK B: PRINT WHO IS WAITING ---
+    printf("\n[SCHEDULER - NODE %d]\n", node);
+    printf("Waiting in queue: ");
+    for (int i = 0; i < queue_sizes[node]; i++) {
+        int t_idx = node_queues[node][i];
+        printf("Drone %d(Pri:%d) ", t_idx, travelers[t_idx].priority);
+    }
+    printf("\n");
+    // ------------------------------------------
+
     int winner_q_idx = 0; 
     
     if (current_algo == ALGO_PRIORITY) {
@@ -187,6 +197,18 @@ void WakeNextTraveler(int node) {
 
     int winner_t_idx = node_queues[node][winner_q_idx];
 
+    // --- EXAM TASK B: PRINT WHO WON AND WHY ---
+    if (current_algo == ALGO_FCFS) {
+        printf("Chosen: Drone %d\n", winner_t_idx);
+        printf("Reason: FCFS scheduling (Drone was first in line).\n");
+    } else {
+        printf("Chosen: Drone %d\n", winner_t_idx);
+        printf("Reason: Priority scheduling (Drone has the highest priority of %d).\n", travelers[winner_t_idx].priority);
+    }
+    printf("-------------------------\n");
+    fflush(stdout); // Forces it to print immediately to the terminal
+    // ------------------------------------------
+
     // Shift queue left
     for (int i = winner_q_idx; i < queue_sizes[node] - 1; i++) {
         node_queues[node][i] = node_queues[node][i+1];
@@ -196,7 +218,6 @@ void WakeNextTraveler(int node) {
     node_occupied[node] = 1; // Mark node as busy
     sem_post(&traveler_semaphores[winner_t_idx]); // Wake up the winner!
 }
-
 
 int main(int argc, char *argv[]) {
     // NEW: Command Line Parsing
@@ -374,7 +395,7 @@ int main(int argc, char *argv[]) {
             DrawRectangleRec(btn, GREEN); DrawText("PLAY", (int)btn.x + 20, (int)btn.y + 10, 20, WHITE);
         }
 
-        // NEW: Draw Algorithm Text
+        // Draw Algorithm Text
         DrawText(TextFormat("ALGORITHM: %s", current_algo == ALGO_FCFS ? "FCFS" : "PRIORITY"), 300, 20, 24, YELLOW);
 
         for (int i = 0; i < num_travelers; i++) {
@@ -383,7 +404,7 @@ int main(int argc, char *argv[]) {
                 DrawPoly(travelers[i].dronePos, 6, 18.0f, 0.0f, travelers[i].color);
                 DrawPolyLinesEx(travelers[i].dronePos, 6, 18.0f, 0.0f, 2.0f, WHITE);
                 
-                // NEW: Draw Priority Number on Drone
+                // Draw Priority Number on Drone
                 DrawText(TextFormat("%d", travelers[i].priority), (int)travelers[i].dronePos.x - 4, (int)travelers[i].dronePos.y - 6, 12, BLACK);
             }
         }
