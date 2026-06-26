@@ -123,22 +123,17 @@ void GetTravelerColors(int index, Color *droneColor, Color *pathColor) {
     *droneColor = dColors[idx];
     *pathColor = pColors[idx];
 } 
-/* Child process entry point — each traveler runs as a separate process.
- * Computes its own shortest path via Dijkstra, then writes IPCMessage
- * structs step-by-step into the shared write end of the pipe. */
 
- void RunChildProcess(int index, int n, int write_fd) {
+void RunChildProcess(int index, int n, int write_fd, int ack_read_fd) {
     int childPath[MAX_NODES];
     int childPathCount = 0;
 
-   
     Dijkstra(n, travelers[index].src, travelers[index].dst, childPath, &childPathCount);
 
     if (childPathCount == 0) {
         exit(1);
     }
 
-   
     for (int step = 0; step < childPathCount; step++) {
         IPCMessage msg;
         msg.pid = getpid();
@@ -152,31 +147,30 @@ void GetTravelerColors(int index, Color *droneColor, Color *pathColor) {
             msg.next_node = -1;
             msg.is_finished = 1;
         }
-        /* Atomic for small writes on Linux (PIPE_BUF = 4096 bytes). Since
-         * sizeof(IPCMessage) is well under that limit, multiple children writing
-         * concurrently will not interleave — each write is delivered whole. */
 
-       
+        // 1. Send status updates to father process
         write(write_fd, &msg, sizeof(IPCMessage));
 
-   
+        // --- EXAM TASK: BLOCK AND WAIT FOR APPROVAL FROM FATHER ---
+        char ack_token;
+        read(ack_read_fd, &ack_token, 1); // Child process blocks here until father approves
+        // -----------------------------------------------------------
+
         if (!msg.is_finished) {
             int u = childPath[step];
             int v = childPath[step + 1];
             int W = graph[u][v];
 
-      /* Simulates travel time proportional to edge weight W.
-             * Each "jump" represents one km of travel (300 ms per km). */
             for (int jump = 0; jump < W; jump++) {
                 usleep(300000); 
             }
-            
             
             sleep(1);
         }
     }
 
     close(write_fd);
+    close(ack_read_fd);
     exit(0);
 }
 
@@ -244,19 +238,13 @@ int main(int argc, char *argv[]) {
     }
     fclose(file);
 
-     /* Single shared pipe for all child → parent communication.
-     * Safe here because IPCMessage fits within PIPE_BUF, guaranteeing
-     * atomic writes even with multiple concurrent child processes. */
-
     int pipe_fds[2];
-    if (pipe(pipe_fds) == -1) {
+    int ack_fds[2]; // NEW: Channel for father's approval messages
+
+    if (pipe(pipe_fds) == -1 || pipe(ack_fds) == -1) {
         perror("Pipe creation failed");
         return 1;
     }
-
-     /* Set read end non-blocking so the render loop is never stalled waiting
-     * for a child. read() returns EAGAIN immediately when the pipe is empty,
-     * keeping the GUI at 60 FPS regardless of child activity. */
 
     fcntl(pipe_fds[0], F_SETFL, O_NONBLOCK);
 
@@ -267,18 +255,16 @@ int main(int argc, char *argv[]) {
             exit(1);
         } else if (pid == 0) {
             close(pipe_fds[0]);
-            RunChildProcess(i, n, pipe_fds[1]);
+            close(ack_fds[1]); // Close unused write end of ack pipeline
+            RunChildProcess(i, n, pipe_fds[1], ack_fds[0]);
         } else {
             child_pids[i] = pid;
         }
     }
-     /* Parent closes its copy of the write end. Until this point, the pipe
-     * has one write-end fd per child plus this one. Closing here ensures
-     * read() will eventually return 0 (EOF) once all children exit and close
-     * their own write-end copies — without this, the pipe never signals EOF. */
     close(pipe_fds[1]);
+    close(ack_fds[0]); // Parent closes read end of acknowledgment channel
 
-    InitWindow(800, 600, "Project Sentinel - Milestone 5 (IPC Pipes)");
+    InitWindow(800, 600, "Project Sentinel - Milestone 5 (IPC Pipes Sync)");
     SetTargetFPS(60);
 
     bool isPlaying = false;
@@ -307,6 +293,11 @@ int main(int argc, char *argv[]) {
                     printf("[PID=%d] arrived at node %d | next node: %d\n", msg.pid, msg.current_node, msg.next_node);
                 }
                 fflush(stdout);
+
+                // --- EXAM TASK: FATHER PROCESS SENDS APPROVAL SIGNAL BACK ---
+                char approve_token = 'A';
+                write(ack_fds[1], &approve_token, 1); // Unblocks the waiting child process instantly!
+                // -------------------------------------------------------------
             }
         }
 
@@ -366,11 +357,8 @@ int main(int argc, char *argv[]) {
     }
 
     close(pipe_fds[0]);
+    close(ack_fds[1]);
     CloseWindow();
-
-     /* Reap all child processes to avoid zombies. Called after CloseWindow()
-     * so the GUI doesn't block; by then every child has had time to finish
-     * and exit normally. */
 
     for (int i = 0; i < num_travelers; i++) {
         waitpid(child_pids[i], NULL, 0);
